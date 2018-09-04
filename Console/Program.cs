@@ -13,14 +13,11 @@ namespace NYTimesFrontPageDownloader
 
         static void Main(string[] args)
         {
-            //Set start date to start download low resolution front page scans for, 09/18/1851 is the first date available
+            //Set start date to start downloading low-resolution front page scans to 09/18/1851; the first date available
             var lowResolutionStartDate = new DateTime(1851, 09, 18);
 
-            //Set end date for low resolution front page scans for 07/05/2012, since we know the high resolution scans start the next day
-            var lowResolutionEndDate = new DateTime(2012, 07, 05);
-
-            //Lets start the high resolutions scan date to one day after the low resolution end date
-            var highResolutionStartDate = lowResolutionEndDate.AddDays(1);
+            ////Set start date to start downloading high-resolution front page scans to 07/12/2012; the first date available
+            var highResolutionStartDate = new DateTime(2012, 07, 06);
 
             //Lets end today, feel free to change this to a different day
             var highResolutionEndDate = DateTime.Today;
@@ -29,7 +26,7 @@ namespace NYTimesFrontPageDownloader
             var allLowResolutionScans = Enumerable
               .Range(0, int.MaxValue)
               .Select(index => new DateTime?(lowResolutionStartDate.AddDays(index)))
-              .TakeWhile(date => date <= lowResolutionEndDate)
+              .TakeWhile(date => date <= highResolutionEndDate)
               .Select(x => new Uri($"http://www.nytimes.com/images/{x.Value.Year:D4}/{x.Value.Month:D2}/{x.Value.Day:D2}/nytfrontpage/scan.jpg"));
 
             //Use LINQ to create a list of Uris for every day between the start and end dates
