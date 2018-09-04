@@ -9,14 +9,14 @@ namespace NYTimesFrontPageDownloader
 {
     class Program
     {
-        static HttpClient client = new HttpClient();
+        static HttpClient client = new HttpClient(new HttpClientHandler { MaxConnectionsPerServer = 1024 } );
 
         static void Main(string[] args)
         {
             //Set start date to start downloading low-resolution front page scans to 09/18/1851; the first date available
             var lowResolutionStartDate = new DateTime(1851, 09, 18);
 
-            ////Set start date to start downloading high-resolution front page scans to 07/12/2012; the first date available
+            //Set start date to start downloading high-resolution front page scans to 07/12/2012; the first date available
             var highResolutionStartDate = new DateTime(2012, 07, 06);
 
             //Lets end today, feel free to change this to a different day
@@ -39,9 +39,7 @@ namespace NYTimesFrontPageDownloader
             //Combine the two lists so we only loop through one
             var allUris = allLowResolutionScans.Concat(allHighResolutionScans);
 
-            ServicePointManager.DefaultConnectionLimit = 1024;
-            ServicePointManager.Expect100Continue = false;
-            ServicePointManager.ReusePort = true;
+            client.DefaultRequestHeaders.ExpectContinue = false;
 
             //Loop through each link and download the front page
             Parallel.ForEach(allUris, new ParallelOptions { MaxDegreeOfParallelism = 8 }, singleLink => {
