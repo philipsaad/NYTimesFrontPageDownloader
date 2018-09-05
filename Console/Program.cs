@@ -9,7 +9,7 @@ namespace NYTimesFrontPageDownloader
 {
     class Program
     {
-        static HttpClient client = new HttpClient(new HttpClientHandler { MaxConnectionsPerServer = 1024 } );
+        static HttpClient client = new HttpClient(new HttpClientHandler { MaxConnectionsPerServer = 1024 });
 
         static async Task Main(string[] args)
         {
@@ -82,7 +82,7 @@ namespace NYTimesFrontPageDownloader
                 }
 
                 //Create the file on the file system and prep it for saving
-                using (var fileStream = File.Create(fileSavePath, 16384, ExpectContinueExpectContinue))
+                using (var fileStream = File.Create(fileSavePath, 16384, FileOptions.Asynchronous))
                 {
                     using (var reader = new StreamReader(httpStream))
                     {
