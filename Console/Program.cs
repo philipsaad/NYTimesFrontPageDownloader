@@ -9,9 +9,9 @@ namespace NYTimesFrontPageDownloader
 {
     class Program
     {
-        static HttpClient client = new HttpClient(new HttpClientHandler { MaxConnectionsPerServer = 1024 } );
+        static HttpClient client = new HttpClient(new HttpClientHandler { MaxConnectionsPerServer = 1024 });
 
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             //Set start date to start downloading low-resolution front page scans to 09/18/1851; the first date available
             var lowResolutionStartDate = new DateTime(1851, 09, 18);
@@ -42,9 +42,7 @@ namespace NYTimesFrontPageDownloader
             client.DefaultRequestHeaders.ExpectContinue = false;
 
             //Loop through each link and download the front page
-            Parallel.ForEach(allUris, new ParallelOptions { MaxDegreeOfParallelism = 8 }, singleLink => {
-                Task.WaitAll(nyTimesHelper(singleLink));
-            });
+            await Task.WhenAll(allUris.Select(singleLink => nyTimesHelper(singleLink)));
         }
 
         //Simple helper method to parse out the dates from the Uri so we can save them in a file naming convention that makes sense
@@ -58,7 +56,7 @@ namespace NYTimesFrontPageDownloader
             var extension = singleLink.Segments[6].Split('.').Last();
 
             //Download file in year\month\year_month_day.ext format
-            await downloadFileAsync(singleLink, $"{year}\\{month}\\{year}_{month}_{day}.{extension}");
+            await downloadFileAsync(singleLink, $@"{year}\{month}\{year}_{month}_{day}.{extension}");
         }
 
         //Download the file asynchronously and write the result to the console
@@ -68,15 +66,10 @@ namespace NYTimesFrontPageDownloader
             var request = new HttpRequestMessage(HttpMethod.Get, singleLink);
 
             //Make the call, but only read the headers
-            var sendTask = client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
-            var response = sendTask.Result;
+            var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
 
-            //If we cannot find the file on the server, lets write that to the console and move on
-            if (response.StatusCode == HttpStatusCode.NotFound)
-            {
-                Console.WriteLine($"Error downloading file {fileSavePath}: 404 - File Not Found");
-            }
-            else
+            //Make sure we have a valid response
+            if (response.StatusCode == HttpStatusCode.OK)
             {
                 //Otherwise, lets proceed with the download
                 var httpStream = await response.Content.ReadAsStreamAsync();
@@ -89,14 +82,14 @@ namespace NYTimesFrontPageDownloader
                 }
 
                 //Create the file on the file system and prep it for saving
-                using (var fileStream = File.Create(fileSavePath, 4096, FileOptions.Asynchronous))
+                using (var fileStream = File.Create(fileSavePath, 16384, FileOptions.Asynchronous))
                 {
                     using (var reader = new StreamReader(httpStream))
                     {
                         {
                             //Write the contents of the filesteam to the file
-                            httpStream.CopyTo(fileStream);
-                            fileStream.Flush();
+                            await httpStream.CopyToAsync(fileStream);
+                            await fileStream.FlushAsync();
                         }
                     }
                 }
@@ -108,10 +101,18 @@ namespace NYTimesFrontPageDownloader
                 }
                 else
                 {
+                    Console.ForegroundColor = ConsoleColor.Red;
                     Console.WriteLine($"Error validating file {fileSavePath}");
+                    Console.ResetColor();
                 }
             }
-
+            //If we run into some other HTTP status code, lets write that to the console and move on
+            else
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"Error downloading file {fileSavePath}: {(int)response.StatusCode} - {response.StatusCode}");
+                Console.ResetColor();
+            }
         }
 
         // Returns the human-readable file size for an arbitrary, 64-bit file size 
