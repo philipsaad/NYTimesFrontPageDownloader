@@ -11,7 +11,7 @@ namespace NYTimesFrontPageDownloader
     {
         static HttpClient client = new HttpClient(new HttpClientHandler { MaxConnectionsPerServer = 1024 } );
 
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             //Set start date to start downloading low-resolution front page scans to 09/18/1851; the first date available
             var lowResolutionStartDate = new DateTime(1851, 09, 18);
@@ -42,9 +42,7 @@ namespace NYTimesFrontPageDownloader
             client.DefaultRequestHeaders.ExpectContinue = false;
 
             //Loop through each link and download the front page
-            Parallel.ForEach(allUris, new ParallelOptions { MaxDegreeOfParallelism = 8 }, singleLink => {
-                Task.WaitAll(nyTimesHelper(singleLink));
-            });
+            await Task.WhenAll(allUris.Select(singleLink => nyTimesHelper(singleLink)));
         }
 
         //Simple helper method to parse out the dates from the Uri so we can save them in a file naming convention that makes sense
@@ -68,8 +66,7 @@ namespace NYTimesFrontPageDownloader
             var request = new HttpRequestMessage(HttpMethod.Get, singleLink);
 
             //Make the call, but only read the headers
-            var sendTask = client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
-            var response = sendTask.Result;
+            var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
 
             //Make sure we have a valid response
             if (response.StatusCode == HttpStatusCode.OK)
@@ -85,14 +82,14 @@ namespace NYTimesFrontPageDownloader
                 }
 
                 //Create the file on the file system and prep it for saving
-                using (var fileStream = File.Create(fileSavePath, 4096, FileOptions.Asynchronous))
+                using (var fileStream = File.Create(fileSavePath, 16384, ExpectContinueExpectContinue))
                 {
                     using (var reader = new StreamReader(httpStream))
                     {
                         {
                             //Write the contents of the filesteam to the file
-                            httpStream.CopyTo(fileStream);
-                            fileStream.Flush();
+                            await httpStream.CopyToAsync(fileStream);
+                            await fileStream.FlushAsync();
                         }
                     }
                 }
