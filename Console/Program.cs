@@ -71,12 +71,8 @@ namespace NYTimesFrontPageDownloader
             var sendTask = client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
             var response = sendTask.Result;
 
-            //If we cannot find the file on the server, lets write that to the console and move on
-            if (response.StatusCode == HttpStatusCode.NotFound)
-            {
-                Console.WriteLine($"Error downloading file {fileSavePath}: 404 - File Not Found");
-            }
-            else
+            //Make sure we have a valid response
+            if (response.StatusCode == HttpStatusCode.OK)
             {
                 //Otherwise, lets proceed with the download
                 var httpStream = await response.Content.ReadAsStreamAsync();
@@ -108,10 +104,18 @@ namespace NYTimesFrontPageDownloader
                 }
                 else
                 {
+                    Console.ForegroundColor = ConsoleColor.Red;
                     Console.WriteLine($"Error validating file {fileSavePath}");
+                    Console.ResetColor();
                 }
             }
-
+            //If we run into some other HTTP status code, lets write that to the console and move on
+            else
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"Error downloading file {fileSavePath}: {(int)response.StatusCode} - {response.StatusCode}");
+                Console.ResetColor();
+            }
         }
 
         // Returns the human-readable file size for an arbitrary, 64-bit file size 
