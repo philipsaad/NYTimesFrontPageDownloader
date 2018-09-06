@@ -55,8 +55,17 @@ namespace NYTimesFrontPageDownloader
             var day = singleLink.Segments[4].Replace("/", "");
             var extension = singleLink.Segments[6].Split('.').Last();
 
-            //Download file in year\month\year_month_day.ext format
-            await downloadFileAsync(singleLink, $@"{year}\{month}\{year}_{month}_{day}.{extension}");
+            var fileSavePath = $@"{year}\{month}\{year}_{month}_{day}.{extension}";
+
+            if (File.Exists(fileSavePath))
+            {
+                Console.WriteLine($"File {fileSavePath} already exists; skipped");
+            }
+            else
+            {
+                //Download file in year\month\year_month_day.ext format
+                await downloadFileAsync(singleLink, fileSavePath);
+            }
         }
 
         //Download the file asynchronously and write the result to the console
